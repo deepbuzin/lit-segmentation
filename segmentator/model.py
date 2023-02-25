@@ -58,10 +58,10 @@ class FashionModel(pl.LightningModule):
         return self.common_epoch_end(outputs, "train")
 
     def validation_step(self, batch, batch_idx):
-        return self.common_step(batch, "valid")
+        return self.common_step(batch, "val")
 
     def validation_epoch_end(self, outputs):
-        return self.common_epoch_end(outputs, "valid")
+        return self.common_epoch_end(outputs, "val")
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.0001)
