@@ -4,7 +4,7 @@ from pprint import pprint
 import albumentations as A
 import pytorch_lightning as pl
 from albumentations.pytorch import ToTensorV2
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from torch.utils.data import DataLoader
 
 from segmentator.model import FashionModel
@@ -46,19 +46,21 @@ def setup_training(data_root, batch_size=16, num_workers=4, arch="FPN", encoder_
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     checkpoint_callback = ModelCheckpoint(monitor="train_loss", save_top_k=-1)
+    early_stop_callback = EarlyStopping(monitor="val_loss", mode="min")
     model = FashionModel(arch=arch, encoder_name=encoder_name, in_channels=3, out_classes=train_dataset.num_classes)
 
     trainer = pl.Trainer(
         gpus=1,
         max_epochs=max_epochs,
-        callbacks=[checkpoint_callback]
+        callbacks=[checkpoint_callback, early_stop_callback]
     )
-    return train_dataloader, val_dataloader, model, trainer
+    return {"train_dataloader": train_dataloader,
+            "val_dataloader": val_dataloader,
+            "model": model,
+            "trainer": trainer}
 
 
-def train(settings):
-    train_dataloader, val_dataloader, model, trainer = setup_training(**settings)
-
+def train(train_dataloader, val_dataloader, model, trainer):
     trainer.fit(
         model,
         train_dataloaders=train_dataloader,
@@ -76,4 +78,4 @@ if __name__ == "__main__":
                          arch="FPN",
                          encoder_name="resnet34",
                          max_epochs=10)
-    train(train_setting)
+    train(**setup_training(**train_setting))
