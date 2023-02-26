@@ -1,16 +1,19 @@
 import torch
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
+from timm.optim import AdaBelief
+from timm.scheduler import CosineLRScheduler
+from timm.scheduler.scheduler import Scheduler
 
 
 class FashionModel(pl.LightningModule):
 
-    def __init__(self, arch, encoder_name, in_channels, out_classes, **kwargs):
+    def __init__(self, arch, encoder_name, in_channels, out_classes, learning_rate=0.0001, **kwargs):
         super().__init__()
-        self.model = smp.create_model(arch, encoder_name=encoder_name, in_channels=in_channels, classes=out_classes,
-                                      **kwargs)
-        params = smp.encoders.get_preprocessing_params(encoder_name)
+        self.model = smp.create_model(arch, encoder_name=encoder_name, encoder_weights="imagenet",
+                                      in_channels=in_channels, classes=out_classes, **kwargs)
         self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTICLASS_MODE, from_logits=True)
+        self.learning_rate = learning_rate
 
     def forward(self, x):
         x = self.model(x)
@@ -64,4 +67,11 @@ class FashionModel(pl.LightningModule):
         return self.common_epoch_end(outputs, "val")
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=0.0001)
+        optimizer = AdaBelief(self.parameters(), lr=self.learning_rate, weight_decay=0.000001)
+        scheduler = CosineLRScheduler(optimizer, t_initial=10, lr_min=0.0000003,
+                                      cycle_decay=0.8, warmup_t=5, warmup_lr_init=0.00001)
+        return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
+
+    def lr_scheduler_step(self, scheduler: Scheduler, optimizer_idx, metric):
+        scheduler.step(epoch=self.current_epoch)  # timm's scheduler need the epoch value
+
