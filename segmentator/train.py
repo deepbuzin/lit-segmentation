@@ -7,14 +7,14 @@ from pprint import pprint
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, LearningRateMonitor
 
-from segmentator.model import FashionModel
+from segmentator.model import PcsModel
 from segmentator.pcs_dataset import PcsDataModule
 
 
-def setup_training(data_root, batch_size=16, mixed_precision=False,
-                   num_workers=4, arch="FPN", encoder_name="resnet34", max_epochs=10):
+def setup_training(data_root, learning_rate=0.0001, batch_size=16, mixed_precision=False,
+                   num_workers=4, arch="FPN", backbone="resnet34", max_epochs=10):
     datamodule = PcsDataModule(root=data_root, batch_size=batch_size, num_workers=num_workers)
-    model = FashionModel(arch=arch, encoder_name=encoder_name, in_channels=3, out_classes=datamodule.num_classes)
+    model = PcsModel(learning_rate=learning_rate, arch=arch, backbone=backbone, num_classes=datamodule.num_classes)
 
     # checkpoint_callback = ModelCheckpoint(monitor="train_loss", save_top_k=-1)
     early_stop_callback = EarlyStopping(monitor="val_loss", mode="min")
@@ -27,8 +27,8 @@ def setup_training(data_root, batch_size=16, mixed_precision=False,
         callbacks=[early_stop_callback, lr_monitor],
         precision=16 if mixed_precision else 32,
         accumulate_grad_batches=4,
-        # auto_scale_batch_size="binsearch"
-        # auto_lr_find=True
+        # auto_scale_batch_size="binsearch",
+        # auto_lr_find=True,
     )
     return {"model": model,
             "datamodule": datamodule,
@@ -44,11 +44,12 @@ def train(model, datamodule, trainer):
 
 if __name__ == "__main__":
     train_setting = dict(data_root="../pcs",
+                         learning_rate=1e-4,
                          batch_size=20,
                          mixed_precision=True,
                          num_workers=os.cpu_count(),
-                         arch="FPN",
-                         encoder_name="resnet34",
+                         arch="smp_FPN",
+                         backbone="resnet34",
                          max_epochs=100)
     train(**setup_training(**train_setting))
 

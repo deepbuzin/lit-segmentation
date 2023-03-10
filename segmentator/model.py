@@ -6,12 +6,20 @@ from timm.scheduler import CosineLRScheduler
 from timm.scheduler.scheduler import Scheduler
 
 
-class FashionModel(pl.LightningModule):
+def _create_model(arch, backbone, num_classes, pretrain="imagenet", **kwargs):
+    if "smp" in arch:
+        model = smp.create_model(arch[4:], encoder_name=backbone, encoder_weights=pretrain,
+                                 in_channels=3, classes=num_classes, **kwargs)
+    else:
+        raise KeyError(f"{arch} is not available")
+    return model
 
-    def __init__(self, arch, encoder_name, in_channels, out_classes, learning_rate=0.0001, **kwargs):
+
+class PcsModel(pl.LightningModule):
+
+    def __init__(self, arch, backbone, num_classes, learning_rate=0.0001, **kwargs):
         super().__init__()
-        self.model = smp.create_model(arch, encoder_name=encoder_name, encoder_weights="imagenet",
-                                      in_channels=in_channels, classes=out_classes, **kwargs)
+        self.model = _create_model(arch, backbone, num_classes, **kwargs)
         self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTICLASS_MODE, from_logits=True)
         self.learning_rate = learning_rate
 
