@@ -5,11 +5,15 @@ from timm.optim import AdaBelief
 from timm.scheduler import CosineLRScheduler
 from timm.scheduler.scheduler import Scheduler
 
+from segmentator.models.fcn import get_fcn
+
 
 def _create_model(arch, backbone, num_classes, pretrain="imagenet", **kwargs):
     if "smp" in arch:
         model = smp.create_model(arch[4:], encoder_name=backbone, encoder_weights=pretrain,
                                  in_channels=3, classes=num_classes, **kwargs)
+    elif "fcn" in arch:
+        model = get_fcn(backbone, num_classes, pretrained=True, aux_classifier=False)
     else:
         raise KeyError(f"{arch} is not available")
     return model
@@ -36,7 +40,7 @@ class PcsModel(pl.LightningModule):
         mask = batch["mask"].long()
         assert mask.ndim == 3  # Shape of the mask should be [batch_size, num_classes, height, width]
 
-        logits_mask = self.forward(image)
+        logits_mask = self.forward(image)["out"]  # Predicted mask contains logits
         loss = self.loss_fn(logits_mask,
                             mask)  # Predicted mask contains logits, and loss_fn param `from_logits` is set to True
 

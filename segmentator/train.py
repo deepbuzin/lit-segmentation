@@ -45,11 +45,11 @@ def train(model, datamodule, trainer):
 if __name__ == "__main__":
     train_setting = dict(data_root="../pcs",
                          learning_rate=1e-4,
-                         batch_size=20,
+                         batch_size=18,
                          mixed_precision=True,
                          num_workers=os.cpu_count(),
-                         arch="smp_FPN",
-                         backbone="resnet34",
+                         arch="fcn",
+                         backbone="convnext_tiny",
                          max_epochs=100)
     train(**setup_training(**train_setting))
 
