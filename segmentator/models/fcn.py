@@ -40,7 +40,7 @@ class FCN(nn.Module):
         return result
 
 
-def get_fcn(backbone_name="resnet34", num_classes=1, pretrained=True, aux_classifier=True):
+def get_fcn(backbone_name="resnet34", num_classes=1, pretrained=True, aux_classifier=False):
     backbone = timm.create_model(backbone_name, pretrained=pretrained, features_only=True)
     return FCN(backbone, num_classes, aux_classifier=aux_classifier)
 

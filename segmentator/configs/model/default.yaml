@@ -1,7 +1,9 @@
 _target_: segmentator.model.PcsModel
-arch: ???
-backbone: ???
-num_classes: 59
+model_instance:
+  _target_: ???
+  backbone_name: ???
+  num_classes: 59
+  pretrained: True
 
 optimizer_partial:
   _target_: timm.optim.AdaBelief

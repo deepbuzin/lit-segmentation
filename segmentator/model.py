@@ -10,28 +10,12 @@ from segmentator.models.pspnet import get_pspnet
 from segmentator.models.unet import get_unet
 
 
-def _create_model(arch, backbone, num_classes, pretrain="imagenet", **kwargs):
-    if "smp" in arch:
-        model = smp.create_model(arch[4:], encoder_name=backbone, encoder_weights=pretrain,
-                                 in_channels=3, classes=num_classes, **kwargs)
-    elif "fcn" in arch:
-        model = get_fcn(backbone, num_classes, pretrained=True, aux_classifier=False)
-    elif "unet" in arch:
-        model = get_unet(backbone, num_classes, pretrained=True)
-    elif "pspnet" in arch:
-        model = get_pspnet(backbone, num_classes, pretrained=True)
-    else:
-        raise KeyError(f"{arch} is not available")
-    return model
-
-
 class PcsModel(pl.LightningModule):
-
-    def __init__(self, arch, backbone, num_classes,
+    def __init__(self, model_instance: torch.nn.Module,
                  optimizer_partial: partial,
-                 scheduler_partial: partial, **kwargs):
+                 scheduler_partial: partial):
         super().__init__()
-        self.model = _create_model(arch, backbone, num_classes, **kwargs)
+        self.model = model_instance
         self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTICLASS_MODE, from_logits=True)
         self.optimizer_partial = optimizer_partial
         self.scheduler_partial = scheduler_partial

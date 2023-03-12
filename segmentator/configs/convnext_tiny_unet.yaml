@@ -5,7 +5,7 @@ defaults:
 
 model:
   model_instance:
-    _target_: segmentator.models.fcn.get_fcn
+    _target_: segmentator.models.unet.get_unet
     backbone_name: convnext_tiny
 
 datamodule:
