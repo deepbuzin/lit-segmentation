@@ -1,0 +1,46 @@
+model:
+  _target_: segmentator.model.PcsModel
+  arch: fcn
+  backbone: resnet34
+  num_classes: 59
+  optimizer_partial:
+    _target_: timm.optim.AdaBelief
+    _partial_: True
+    weight_decay: 0.000001
+    lr: 0.0001
+  scheduler_partial:
+    _target_: timm.scheduler.CosineLRScheduler
+    _partial_: True
+    t_initial: 10
+    lr_min: 0.0000003
+    cycle_decay: 0.8
+    warmup_t: 5
+    warmup_lr_init: 0.00001
+
+
+datamodule:
+  _target_: segmentator.pcs_dataset.PcsDataModule
+  batch_size: 18
+  num_workers: 8
+  root: ../pcs
+
+
+trainer:
+  _target_: pytorch_lightning.Trainer
+  accelerator: gpu
+  devices: 1
+  max_epochs: 100
+  callbacks:
+    - _target_: pytorch_lightning.callbacks.EarlyStopping
+      monitor: val_loss
+      patience: 3
+      verbose: True
+      mode: min
+    - _target_: pytorch_lightning.callbacks.LearningRateMonitor
+      logging_interval: epoch
+  precision: 16
+  accumulate_grad_batches: 4
+  auto_scale_batch_size: None
+  auto_lr_find: False
+
+

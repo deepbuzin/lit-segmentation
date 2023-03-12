@@ -1,8 +1,8 @@
+from functools import partial
+
 import torch
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
-from timm.optim import AdaBelief
-from timm.scheduler import CosineLRScheduler
 from timm.scheduler.scheduler import Scheduler
 
 from segmentator.models.fcn import get_fcn
@@ -24,11 +24,14 @@ def _create_model(arch, backbone, num_classes, pretrain="imagenet", **kwargs):
 
 class PcsModel(pl.LightningModule):
 
-    def __init__(self, arch, backbone, num_classes, learning_rate=0.0001, **kwargs):
+    def __init__(self, arch, backbone, num_classes,
+                 optimizer_partial: partial,
+                 scheduler_partial: partial, **kwargs):
         super().__init__()
         self.model = _create_model(arch, backbone, num_classes, **kwargs)
         self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTICLASS_MODE, from_logits=True)
-        self.learning_rate = learning_rate
+        self.optimizer_partial = optimizer_partial
+        self.scheduler_partial = scheduler_partial
 
     def forward(self, x):
         x = self.model(x)
@@ -82,9 +85,8 @@ class PcsModel(pl.LightningModule):
         return self.common_epoch_end(outputs, "val")
 
     def configure_optimizers(self):
-        optimizer = AdaBelief(self.parameters(), lr=self.learning_rate, weight_decay=0.000001)
-        scheduler = CosineLRScheduler(optimizer, t_initial=10, lr_min=0.0000003,
-                                      cycle_decay=0.8, warmup_t=5, warmup_lr_init=0.00001)
+        optimizer = self.optimizer_partial(self.parameters())
+        scheduler = self.scheduler_partial(optimizer)
         return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
 
     def lr_scheduler_step(self, scheduler: Scheduler, optimizer_idx, metric):
