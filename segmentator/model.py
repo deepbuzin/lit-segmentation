@@ -6,6 +6,7 @@ import segmentation_models_pytorch as smp
 from timm.scheduler.scheduler import Scheduler
 
 from segmentator.models.fcn import get_fcn
+from segmentator.models.pspnet import get_pspnet
 from segmentator.models.unet import get_unet
 
 
@@ -17,6 +18,8 @@ def _create_model(arch, backbone, num_classes, pretrain="imagenet", **kwargs):
         model = get_fcn(backbone, num_classes, pretrained=True, aux_classifier=False)
     elif "unet" in arch:
         model = get_unet(backbone, num_classes, pretrained=True)
+    elif "pspnet" in arch:
+        model = get_pspnet(backbone, num_classes, pretrained=True)
     else:
         raise KeyError(f"{arch} is not available")
     return model

@@ -4,7 +4,7 @@ defaults:
   - trainer: default
 
 model:
-  arch: fcn
+  arch: pspnet
   backbone: convnext_tiny
 
 datamodule:
