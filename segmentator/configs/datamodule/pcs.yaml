@@ -1,0 +1,4 @@
+_target_: segmentator.pcs_dataset.PcsDataModule
+batch_size: ???
+num_workers: 8
+root: ../pcs

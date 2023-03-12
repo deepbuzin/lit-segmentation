@@ -1,0 +1,21 @@
+_target_: segmentator.model.PcsModel
+arch: ???
+backbone: ???
+num_classes: 59
+
+optimizer_partial:
+  _target_: timm.optim.AdaBelief
+  _partial_: True
+  weight_decay: 0.000001
+  lr: 0.0001
+
+scheduler_partial:
+  _target_: timm.scheduler.CosineLRScheduler
+  _partial_: True
+  t_initial: 10
+  lr_min: 0.0000003
+  cycle_decay: 0.8
+  warmup_t: 5
+  warmup_lr_init: 0.00001
+
+
