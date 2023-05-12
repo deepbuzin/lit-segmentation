@@ -5,10 +5,6 @@ import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 from timm.scheduler.scheduler import Scheduler
 
-from segmentator.models.fcn import get_fcn
-from segmentator.models.pspnet import get_pspnet
-from segmentator.models.unet import get_unet
-
 
 class PcsModel(pl.LightningModule):
     def __init__(self, model_instance: torch.nn.Module,
