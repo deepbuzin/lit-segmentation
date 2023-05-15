@@ -1,4 +1,4 @@
-_target_: segmentator.model.PcsModel
+_target_: segmentator.model.SegmentationModel
 model_instance:
   _target_: ???
   backbone_name: ???

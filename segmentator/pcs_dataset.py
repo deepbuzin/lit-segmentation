@@ -4,7 +4,7 @@ from glob import glob
 import albumentations as A
 import cv2
 import pandas as pd
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch
 from albumentations.pytorch import ToTensorV2
 from sklearn.model_selection import train_test_split

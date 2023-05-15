@@ -1,12 +1,12 @@
 from functools import partial
 
 import torch
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import segmentation_models_pytorch as smp
 from timm.scheduler.scheduler import Scheduler
 
 
-class PcsModel(pl.LightningModule):
+class SegmentationModel(pl.LightningModule):
     def __init__(self, model_instance: torch.nn.Module,
                  optimizer_partial: partial,
                  scheduler_partial: partial):
@@ -16,6 +16,9 @@ class PcsModel(pl.LightningModule):
         self.optimizer_partial = optimizer_partial
         self.scheduler_partial = scheduler_partial
 
+        self.training_step_outputs = []
+        self.validation_step_outputs = []
+
     def forward(self, x):
         x = self.model(x)
         return x
@@ -23,8 +26,7 @@ class PcsModel(pl.LightningModule):
     def common_step(self, batch, stage):
         image = batch["image"]
         assert image.ndim == 4  # Shape of the image should be (batch_size, num_channels, height, width)
-        assert image.shape[2] % 32 == 0 and image.shape[
-            3] % 32 == 0  # Check that image dimensions are divisible by 32 to comply with network's downscaling factor
+        assert image.shape[2] % 32 == 0 and image.shape[3] % 32 == 0  # Check that image dimensions are divisible by 32 to comply with network's downscaling factor
 
         mask = batch["mask"].long()
         assert mask.ndim == 3  # Shape of the mask should be [batch_size, num_classes, height, width]
@@ -36,9 +38,17 @@ class PcsModel(pl.LightningModule):
         prob_mask = logits_mask.sigmoid()  # convert mask values to probabilities
         pred_mask = (prob_mask > 0.5).float()  # apply thresholding
 
-        tp, fp, fn, tn = smp.metrics.get_stats(torch.argmax(pred_mask, dim=1).long(), mask.long(), mode="multiclass",
+        tp, fp, fn, tn = smp.metrics.get_stats(torch.argmax(pred_mask, dim=1).long(),
+                                               mask.long(),
+                                               mode="multiclass",
                                                num_classes=59)
-        return {"loss": loss, "tp": tp, "fp": fp, "fn": fn, "tn": tn}
+        if stage == "train":
+            self.training_step_outputs.append({"loss": loss, "tp": tp, "fp": fp, "fn": fn, "tn": tn})
+        elif stage == "val":
+            self.validation_step_outputs.append({"loss": loss, "tp": tp, "fp": fp, "fn": fn, "tn": tn})
+        else:
+            raise ValueError(f"Unknown stage: {stage}")
+        return loss
 
     def common_epoch_end(self, outputs, stage):
         loss = outputs[-1]["loss"]
@@ -58,20 +68,22 @@ class PcsModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         return self.common_step(batch, "train")
 
-    def training_epoch_end(self, outputs):
-        return self.common_epoch_end(outputs, "train")
+    def on_training_epoch_end(self):
+        self.common_epoch_end(self.training_step_outputs, "train")
+        self.training_step_outputs.clear()  # free memory
 
     def validation_step(self, batch, batch_idx):
         return self.common_step(batch, "val")
 
-    def validation_epoch_end(self, outputs):
-        return self.common_epoch_end(outputs, "val")
+    def on_validation_epoch_end(self):
+        self.common_epoch_end(self.validation_step_outputs, "val")
+        self.validation_step_outputs.clear()  # free memory
 
     def configure_optimizers(self):
         optimizer = self.optimizer_partial(self.parameters())
         scheduler = self.scheduler_partial(optimizer)
         return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
 
-    def lr_scheduler_step(self, scheduler: Scheduler, optimizer_idx, metric):
+    def lr_scheduler_step(self, scheduler: Scheduler, metric):
         scheduler.step(epoch=self.current_epoch)  # timm's scheduler need the epoch value
 
