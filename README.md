@@ -1,4 +1,4 @@
-# Segmentation with PyTorch Lightning
+# Segmentation with Lightning
 
 Here I will explore some approaches currently popular withing the segmentation domain.
 The goal here is to get familiar with the Lightning framework, and gain better knowledge
