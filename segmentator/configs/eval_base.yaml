@@ -1,0 +1,10 @@
+model:
+  _target_: segmentator.model.SegmentationModel.load_from_checkpoint
+  checkpoint_path: /home/buzin@ad.speechpro.com/_projects/segmentation/lightning_segmentation/notebooks/lightning_logs/version_4/checkpoints/epoch=16-step=119.ckpt
+  model_instance:
+    _target_: segmentator.models.unet.get_unet
+    backbone_name: convnext_tiny
+    num_classes: 2
+
+
+

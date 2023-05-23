@@ -19,12 +19,12 @@ class FCNHead(nn.Sequential):
 
 
 class FCN(nn.Module):
-    def __init__(self, backbone: nn.Module, num_classes, aux_classifier: bool = False):
+    def __init__(self, encoder: nn.Module, num_classes, aux_classifier: bool = False):
         super().__init__()
-        self.backbone = backbone
-        self.head = FCNHead(backbone.feature_info.channels()[-1], num_classes)
+        self.encoder = encoder
+        self.head = FCNHead(encoder.feature_info.channels()[-1], num_classes)
         self.aux_classifier = aux_classifier
-        self.aux_head = FCNHead(backbone.feature_info.channels()[-2], num_classes) if aux_classifier else None
+        self.aux_head = FCNHead(encoder.feature_info.channels()[-2], num_classes) if aux_classifier else None
 
     def forward(self, x):
         input_shape = x.shape[-2:]

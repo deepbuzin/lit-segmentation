@@ -11,6 +11,3 @@ callbacks:
   - _target_: lightning.pytorch.callbacks.LearningRateMonitor
     logging_interval: epoch
 precision: 16
-accumulate_grad_batches: 4
-auto_scale_batch_size: None
-auto_lr_find: False

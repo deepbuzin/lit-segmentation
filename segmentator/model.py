@@ -8,8 +8,8 @@ from timm.scheduler.scheduler import Scheduler
 
 class SegmentationModel(pl.LightningModule):
     def __init__(self, model_instance: torch.nn.Module,
-                 optimizer_partial: partial,
-                 scheduler_partial: partial):
+                 optimizer_partial: partial = None,
+                 scheduler_partial: partial = None):
         super().__init__()
         self.model = model_instance
         self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTICLASS_MODE, from_logits=True)
@@ -80,6 +80,8 @@ class SegmentationModel(pl.LightningModule):
         self.validation_step_outputs.clear()  # free memory
 
     def configure_optimizers(self):
+        if self.optimizer_partial is None or self.scheduler_partial is None:
+            raise ValueError("Missing optimizer_partial or scheduler_partial")
         optimizer = self.optimizer_partial(self.parameters())
         scheduler = self.scheduler_partial(optimizer)
         return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
