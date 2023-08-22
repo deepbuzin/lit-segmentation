@@ -7,8 +7,8 @@ from omegaconf import DictConfig
 import cv2
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
-from segmentator.leaf_disease_dataset import LeafDiseaseDataset
-import segmentation_models_pytorch as smp
+from lib.data.leafs import LeafDiseaseDataset
+# import segmentation_models_pytorch as smp
 
 
 def fetch_image(image_path, reduction_rate=32, device="cuda"):
