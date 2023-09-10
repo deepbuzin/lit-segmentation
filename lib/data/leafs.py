@@ -1,124 +1,146 @@
-import os
-from glob import glob
+from pathlib import Path
+from typing import List, Dict
 
-import numpy as np
-import albumentations as A
 import cv2
-import pandas as pd
 import lightning.pytorch as pl
+import numpy as np
 import torch
-from albumentations.pytorch import ToTensorV2
-from sklearn.model_selection import train_test_split
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
+
+from params.datamodule import DatasetCfg
 
 
 class LeafDiseaseDataModule(pl.LightningDataModule):
-    num_classes = 2
-
-    def __init__(self, root: str = "../data/leaf_disease", batch_size: int = 16, random_state: int = 1337, num_workers: int = 4):
+    def __init__(
+        self,
+        cfg: Dict[str, List[DatasetCfg]],
+        train_transforms=None,
+        val_transforms=None,
+        batch_size: int = 200,
+        num_workers: int = 4,
+        seed: int = 1337,
+    ):
         super().__init__()
-        self.root = root
 
-        self.train_transform = A.Compose(
-            [
-                A.SmallestMaxSize(256),
-                A.RandomCrop(256, 256),
-                A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=15, p=0.5),
-                A.RGBShift(r_shift_limit=15, g_shift_limit=15, b_shift_limit=15, p=0.5),
-                A.RandomBrightnessContrast(p=0.5),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-                ToTensorV2(),
-            ]
-        )
-
-        self.val_transform = A.Compose(
-            [
-                A.SmallestMaxSize(256),
-                A.CenterCrop(256, 256),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-                ToTensorV2(),
-            ]
-        )
+        self.cfg = cfg
+        self.train_transform = train_transforms
+        self.val_transform = val_transforms
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.seed = seed
 
         self.train_dataset = None
-        self.val_dataset = None
+        self.val_datasets = None
 
-        self.random_state = random_state
-        self.num_workers = num_workers
-        self.batch_size = batch_size
+        self.num_classes = 2
 
-    def prepare_data(self):
-        img_fnames = sorted(["/".join(f.split("/")[-3:]) for f in glob(f"{self.root}/data/images/*.jpg")])
-        mask_fnames = [f"data/masks/{f[-9:-4]}.png" for f in img_fnames]
-        for f in mask_fnames:
-            if not os.path.exists(os.path.join(self.root, f)):
-                print(f"Missing a mask for {f}")
-        fnames = pd.DataFrame(data={"img": img_fnames, "mask": mask_fnames})
-        train, val = train_test_split(fnames, test_size=0.25, random_state=self.random_state)
+    def fetch_datasets(self, mode):
+        assert mode in {"train", "val"}
 
-        train.to_csv(f"{self.root}/train.csv", header=None, index=None)
-        val.to_csv(f"{self.root}/val.csv", header=None, index=None)
+        datasets = []
+        for ds in self.cfg[mode]:
+            datasets.append(
+                LeafDiseaseDataset(
+                    root=ds.root,
+                    transforms=self.train_transform
+                    if mode == "train"
+                    else self.val_transform,
+                )
+            )
+        return datasets
 
     def setup(self, stage: str):
-        # Assign train/val datasets for use in dataloaders
         if stage == "fit":
-            self.train_dataset = LeafDiseaseDataset(root=self.root, mode='train', transform=self.train_transform)
-            self.val_dataset = LeafDiseaseDataset(root=self.root, mode='val', transform=self.val_transform)
+            self.train_dataset = ConcatDataset(self.fetch_datasets("train"))
+            self.val_datasets = self.fetch_datasets(mode="val")
 
-            assert set(self.train_dataset.filenames).isdisjoint(set(self.val_dataset.filenames))
             print(f"Train size: {len(self.train_dataset)}")
-            print(f"Val size: {len(self.val_dataset)}")
+            print(f"Val sizes: {[len(ds) for ds in self.val_datasets]}")
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
-            self.val_dataset = LeafDiseaseDataset(root=self.root, mode='val', transform=self.val_transform)
+            self.val_datasets = self.fetch_datasets(mode="val")
 
         if stage == "predict":
-            self.val_dataset = LeafDiseaseDataset(root=self.root, mode='val', transform=self.val_transform)
+            self.val_datasets = self.fetch_datasets(mode="val")
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+        )
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+        return [
+            DataLoader(
+                d,
+                batch_size=self.batch_size,
+                shuffle=False,
+                num_workers=self.num_workers,
+            )
+            for d in self.val_datasets
+        ]
 
     def test_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+        return [
+            DataLoader(
+                d,
+                batch_size=self.batch_size,
+                shuffle=False,
+                num_workers=self.num_workers,
+            )
+            for d in self.val_datasets
+        ]
 
     def predict_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+        [
+            DataLoader(
+                d,
+                batch_size=self.batch_size,
+                shuffle=False,
+                num_workers=self.num_workers,
+            )
+            for d in self.val_datasets
+        ]
 
 
 class LeafDiseaseDataset(torch.utils.data.Dataset):
-    num_classes = 2
-
-    def __init__(self, root, mode="train", transform=None):
-        assert mode in {"train", "val"}
+    def __init__(self, root: Path, transforms=None):
         self.root = root
-        self.mode = mode
-        self.transform = transform
-        self.filenames = self._read_split()  # read train/val split
+        self.transforms = transforms
+
+        self.img_path = self.root.joinpath("images")
+        self.mask_path = self.root.joinpath("masks")
+
+        self.file_paths: List[List[Path]] = self.load()
 
     def __len__(self):
-        return len(self.filenames)
+        return len(self.file_paths)
 
     def __getitem__(self, idx):
-        image_filename, mask_filename = self.filenames[idx]
-        image = cv2.imread(os.path.join(self.root, image_filename))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        mask = cv2.imread(os.path.join(self.root, mask_filename), cv2.IMREAD_UNCHANGED)
+        img_path, mask_path = self.file_paths[idx]
+
+        img = cv2.imread(img_path.as_posix)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        mask = cv2.imread(mask_path.as_posix(), cv2.IMREAD_UNCHANGED)
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
         mask = (mask > 0).astype(np.uint8)  # convert to binary mask
-        if self.transform is not None:
-            transformed = self.transform(image=image, mask=mask)
-            image = transformed["image"]
-            mask = transformed["mask"]
-        return dict(image=image, mask=mask)
 
-    def _read_split(self):
-        split_filename = "val.csv" if self.mode == "val" else "train.csv"
-        split_path = os.path.join(self.root, split_filename)
-        with open(split_path) as f:
-            split_data = f.read().strip("\n").split("\n")
-        filenames = [tuple(x.split(",")) for x in split_data]
-        return filenames
+        if self.transforms is not None:
+            transformed = self.transforms(image=img, mask=mask)
+            img = transformed["image"]
+            mask = transformed["mask"]
+        return {"img": img, "mask": mask}
+
+    def load(self):
+        file_paths = []
+        imgs = self.img_path.glob("*")
+        masks = list(self.mask_path.glob("*"))
+        for img_p in imgs:
+            mask_p = self.mask_path.joinpath(f"{img_p.stem}.png")
+            assert mask_p in masks
+            file_paths.append([img_p, mask_p])
+        return file_paths
