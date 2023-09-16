@@ -1,6 +1,9 @@
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
+
+from lib.callbacks.metrics import MetricsCallback
+from lib.callbacks.wandb_logging import WandbLogCallback
 from params.datamodule import project
 
 
@@ -15,12 +18,9 @@ trainer = Trainer(
     devices=1,
     max_epochs=30,
     callbacks=[
-        ModelCheckpoint(save_last=True,
-                        monitor="val_loss",
-                        save_top_k=1,
-                        mode="min",
-                        verbose=True),
+        ModelCheckpoint(save_last=True, monitor="val_loss", save_top_k=1, mode="min"),
         LearningRateMonitor(logging_interval="epoch"),
-    ]
+        WandbLogCallback(num_samples=10),
+        MetricsCallback(),
+    ],
 )
-

@@ -3,14 +3,16 @@ from functools import partial
 import torch
 import lightning.pytorch as pl
 from timm.scheduler.scheduler import Scheduler
-from torchmetrics.functional import confusion_matrix, dice
 
 
 class SegmentationModel(pl.LightningModule):
-    def __init__(self, model_instance: torch.nn.Module,
-                 loss_fn: torch.nn.Module = None,
-                 optimizer_partial: partial = None,
-                 scheduler_partial: partial = None):
+    def __init__(
+        self,
+        model_instance: torch.nn.Module,
+        loss_fn: torch.nn.Module = None,
+        optimizer_partial: partial = None,
+        scheduler_partial: partial = None,
+    ):
         super().__init__()
         self.model = model_instance
         self.loss_fn = loss_fn
@@ -24,7 +26,9 @@ class SegmentationModel(pl.LightningModule):
     def common_step(self, batch, stage):
         image = batch["image"]
         assert image.ndim == 4
-        assert image.shape[2] % 32 == 0 and image.shape[3] % 32 == 0  # Check that image dimensions are divisible by 32 to comply with network's downscaling factor
+        assert (
+            image.shape[2] % 32 == 0 and image.shape[3] % 32 == 0
+        )  # Check that image dimensions are divisible by 32 to comply with network's downscaling factor
 
         mask = batch["mask"].long()
         assert mask.ndim == 3
@@ -44,9 +48,7 @@ class SegmentationModel(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         out = self.common_step(batch, "val")
-        self.log_dict({"val/loss": out["loss"],
-                       "cm": confusion_matrix(out["prob_mask"], batch["mask"], "multiclass"),
-                       "dice": dice(out["prob_mask"], batch["mask"])})
+        self.log("val_loss", out["loss"])
         return out
 
     def configure_optimizers(self):
@@ -58,5 +60,6 @@ class SegmentationModel(pl.LightningModule):
         return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
 
     def lr_scheduler_step(self, scheduler: Scheduler, metric):
-        scheduler.step(epoch=self.current_epoch)  # timm's scheduler need the epoch value
-
+        scheduler.step(
+            epoch=self.current_epoch
+        )  # timm's scheduler need the epoch value
