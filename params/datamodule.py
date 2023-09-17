@@ -23,7 +23,7 @@ class DatasetCfg:
 
 TRAIN_DATASETS = [DatasetCfg(art_id=f"{entity}/plants_arts/leaf_disease:v0")]
 
-VAL_DATASETS = []
+VAL_DATASETS = [DatasetCfg(art_id=f"{entity}/plants_arts/leaf_disease:v0")]
 
 train_run = wandb.init(entity=entity, project=project, job_type="train")
 for ds in TRAIN_DATASETS + VAL_DATASETS:

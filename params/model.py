@@ -2,6 +2,7 @@ from functools import partial
 
 import timm
 import torch
+from torchmetrics import Dice
 from lib.core import SegmentationModel
 from lib.models.unet import UNet
 
@@ -13,7 +14,7 @@ backbone = timm.create_model("convnext_pico.d1_in1k",
                              features_only=True)
 
 model_instance = UNet(encoder=backbone, num_classes=num_classes)
-loss_fn = None
+loss_fn = Dice()
 
 optimizer_partial = partial(torch.optim.Adam, weight_decay=0.00001, lr=0.0001)
 
