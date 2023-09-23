@@ -42,6 +42,6 @@ datamodule = LeafDiseaseDataModule(
     cfg={"train": TRAIN_DATASETS, "val": VAL_DATASETS},
     train_transforms=train_transforms,
     val_transforms=val_transforms,
-    batch_size=200,
-    num_workers=4,
+    batch_size=100,
+    num_workers=2,
 )
