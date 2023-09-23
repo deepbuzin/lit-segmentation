@@ -24,7 +24,7 @@ class SegmentationModel(pl.LightningModule):
         return x
 
     def common_step(self, batch, stage):
-        image = batch["image"]
+        image = batch["img"]
         assert image.ndim == 4
         assert (
             image.shape[2] % 32 == 0 and image.shape[3] % 32 == 0

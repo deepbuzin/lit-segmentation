@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, ConcatDataset
 
-from params.datamodule import DatasetCfg
+from lib.data.model.wandb_art import DatasetCfg
 
 
 class LeafDiseaseDataModule(pl.LightningDataModule):
@@ -122,12 +122,13 @@ class LeafDiseaseDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         img_path, mask_path = self.file_paths[idx]
 
-        img = cv2.imread(img_path.as_posix)
+        img = cv2.imread(img_path.as_posix())
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
         mask = cv2.imread(mask_path.as_posix(), cv2.IMREAD_UNCHANGED)
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
         mask = (mask > 0).astype(np.uint8)  # convert to binary mask
+        mask = np.expand_dims(mask, axis=0)
 
         if self.transforms is not None:
             transformed = self.transforms(image=img, mask=mask)

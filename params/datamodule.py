@@ -1,29 +1,16 @@
-from dataclasses import dataclass
-from pathlib import Path
-
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import wandb
 
+from lib.data.model.wandb_art import DatasetCfg
 from lib.data.leafs import LeafDiseaseDataModule
 
 entity = "andreybuzin"
 project = "leafs"
 
+TRAIN_DATASETS = [DatasetCfg(art_id=f"{entity}/plants_arts/leaf_disease_train:v0")]
 
-@dataclass
-class DatasetCfg:
-    art_id: str
-    root = None
-
-    def register_art(self, run):
-        art = run.use_artifact(self.art_id, type="dataset")
-        self.root = Path(art.download())
-
-
-TRAIN_DATASETS = [DatasetCfg(art_id=f"{entity}/plants_arts/leaf_disease:v0")]
-
-VAL_DATASETS = [DatasetCfg(art_id=f"{entity}/plants_arts/leaf_disease:v0")]
+VAL_DATASETS = [DatasetCfg(art_id=f"{entity}/plants_arts/leaf_disease_train:v0")]
 
 train_run = wandb.init(entity=entity, project=project, job_type="train")
 for ds in TRAIN_DATASETS + VAL_DATASETS:

@@ -3,7 +3,7 @@ from pathlib import Path
 from pprint import pprint
 import os
 
-os.environ['WANDB_MODE'] = "disabled"
+# os.environ['WANDB_MODE'] = "disabled"
 sys.path.append(Path(__file__).parent.parent.as_posix())
 
 from params.model import model

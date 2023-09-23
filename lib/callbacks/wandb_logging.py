@@ -31,24 +31,31 @@ class WandbLogCallback(Callback):
             list(range(batch_size)), size=self.num_samples, replace=False
         )
 
-        imgs = [img for img in batch["img"][indices]]
-        gt_masks = batch["mask"][indices]
-        pred_masks = outputs["pred_mask"][indices]
+        imgs = [img for img in batch["img"][indices].cpu()]
+        gt_masks = [gt_m for gt_m in batch["mask"][indices].cpu()]
+        pred_masks = [pred_m for pred_m in outputs["pred_mask"][indices].cpu()]
 
-        columns = ["image", "gt mask", "pred mask", "step"]
+        # columns = ["image", "gt mask", "pred mask", "step"]
         data = []
+
         for img, gt_m, pred_m in zip(imgs, gt_masks, pred_masks):
             data.append(
-                [
-                    wandb.Image(img),
-                    wandb.Image(gt_m),
-                    wandb.Image(pred_m),
-                    trainer.global_step,
-                ]
+
+                    wandb.Image(
+                        img.permute(1, 2, 0).numpy(),
+                        masks={
+                            "pred": {
+                                "mask_data": pred_m.squeeze().numpy()
+                            },
+                            "gt": {
+                                "mask_data": gt_m.squeeze().numpy()
+                            }
+                        }
+                    ),
+
             )
 
-        wandb_logger.log_table(
+        wandb_logger.log_image(
             key=f"val_samples/dataloader_idx_{dataloader_idx}",
-            columns=columns,
-            data=data,
+            images=data,
         )
