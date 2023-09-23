@@ -18,7 +18,7 @@ class MetricsCallback(Callback):
         dataloader_idx: int = 0,
     ):
         gt_masks = batch["mask"]
-        pred_masks = outputs["pred_mask"]
+        pred_masks = outputs["pred_mask"].squeeze()
 
         metrics = {
             "iou": binary_jaccard_index(pred_masks, gt_masks),
