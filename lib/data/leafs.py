@@ -128,7 +128,6 @@ class LeafDiseaseDataset(torch.utils.data.Dataset):
         mask = cv2.imread(mask_path.as_posix(), cv2.IMREAD_UNCHANGED)
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
         mask = (mask > 0).astype(np.uint8)  # convert to binary mask
-        mask = np.expand_dims(mask, axis=-1)
 
         if self.transforms is not None:
             transformed = self.transforms(image=img, mask=mask)
