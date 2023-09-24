@@ -30,7 +30,7 @@ class SegmentationModel(pl.LightningModule):
             image.shape[2] % 32 == 0 and image.shape[3] % 32 == 0
         )  # Check that image dimensions are divisible by 32 to comply with network's downscaling factor
 
-        mask = batch["mask"].long()
+        mask = batch["mask"].float()
         assert mask.ndim == 3
 
         logits_mask = self.forward(image)["out"]
