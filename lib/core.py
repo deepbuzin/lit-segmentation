@@ -9,7 +9,7 @@ class SegmentationModel(pl.LightningModule):
     def __init__(
         self,
         model_instance: torch.nn.Module,
-        loss_fn: torch.nn.Module = None,
+        loss_fn=None,
         optimizer_partial: partial = None,
         scheduler_partial: partial = None,
     ):

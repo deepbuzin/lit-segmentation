@@ -10,7 +10,7 @@ project = "leafs"
 
 TRAIN_DATASETS = [DatasetCfg(art_id=f"{entity}/plants_arts/leaf_disease_train:v0")]
 
-VAL_DATASETS = [DatasetCfg(art_id=f"{entity}/plants_arts/leaf_disease_train:v0")]
+VAL_DATASETS = [DatasetCfg(art_id=f"{entity}/plants_arts/leaf_disease_val:v0")]
 
 train_run = wandb.init(entity=entity, project=project, job_type="train")
 for ds in TRAIN_DATASETS + VAL_DATASETS:
@@ -42,6 +42,6 @@ datamodule = LeafDiseaseDataModule(
     cfg={"train": TRAIN_DATASETS, "val": VAL_DATASETS},
     train_transforms=train_transforms,
     val_transforms=val_transforms,
-    batch_size=100,
+    batch_size=128,
     num_workers=2,
 )
